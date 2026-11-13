@@ -1,0 +1,16 @@
+[Unit]
+Description=Quasar Bridge Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/quasar-bridge
+EnvironmentFile=-/opt/quasar-bridge/runtime.env
+ExecStart=/opt/quasar-bridge/bin/quasar-bridge -config /opt/quasar-bridge/config.json
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

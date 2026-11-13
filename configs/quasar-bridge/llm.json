@@ -1,0 +1,18 @@
+{
+  "llm_base_url": "https://api.openai.com/v1",
+  "llm_model": "grok-4.5",
+  "llm_api": "chat_completions",
+  "llm_api_key": "YOUR_LLM_API_KEY",
+  "llm_chat_parameters": {
+    "reasoning_effort": "low"
+  },
+  "llm_max_output_tokens": 400,
+  "assistant_base_url": "https://api.openai.com/v1",
+  "assistant_model": "gpt-4o",
+  "assistant_api": "chat_completions",
+  "assistant_api_key": "YOUR_ASSISTANT_API_KEY",
+  "assistant_chat_parameters": {
+    "reasoning_effort": "low"
+  },
+  "assistant_max_output_tokens": 4096
+}

@@ -1,0 +1,15 @@
+[Unit]
+Description=Auto-connect ADB to Yandex Station Max
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/bin/bash -c "while true; do if ! adb devices | grep -q \"__STATION_IP__:5555[[:space:]]\\+device\"; then adb connect __STATION_IP__:5555 >/dev/null 2>&1; fi; sleep 10; done"
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

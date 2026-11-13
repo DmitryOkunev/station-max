@@ -1,0 +1,22 @@
+#!/system/bin/sh
+export HOME=/data/local/tmp
+KEY=/data/dropbear/id_su
+
+if [ "$1" = "-c" ]; then
+    shift
+    exec /odm/bin/dbclient -y -i "$KEY" -p 2222 root@127.0.0.1 "$@" < /dev/null 2>/dev/null
+elif [ "$1" = "0" ] || [ "$1" = "root" ]; then
+    shift
+    if [ "$1" = "-c" ]; then
+        shift
+        exec /odm/bin/dbclient -y -i "$KEY" -p 2222 root@127.0.0.1 "$@" < /dev/null 2>/dev/null
+    elif [ -n "$1" ]; then
+        exec /odm/bin/dbclient -y -i "$KEY" -p 2222 root@127.0.0.1 "$@" < /dev/null 2>/dev/null
+    else
+        exec /odm/bin/dbclient -y -i "$KEY" -p 2222 root@127.0.0.1 < /dev/null 2>/dev/null
+    fi
+elif [ -n "$1" ]; then
+    exec /odm/bin/dbclient -y -i "$KEY" -p 2222 root@127.0.0.1 "$@" < /dev/null 2>/dev/null
+else
+    exec /odm/bin/dbclient -y -i "$KEY" -p 2222 root@127.0.0.1 < /dev/null 2>/dev/null
+fi

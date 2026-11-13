@@ -1,0 +1,240 @@
+diff --git a/cmd/quasar-bridge/config.go b/cmd/quasar-bridge/config.go
+old mode 100644
+new mode 100755
+index 4decbba..aa10721
+--- a/cmd/quasar-bridge/config.go
++++ b/cmd/quasar-bridge/config.go
+@@ -26,6 +26,7 @@ type progressConfig struct {
+ 
+ type config struct {
+ 	AirPlay            airPlayConfig        `json:"airplay"`
++	SmartTube          smartTubeConfig      `json:"smarttube"`
+ 	DialogueContext    dialogue.Config      `json:"dialogue_context"`
+ 	LocalProgress      progressConfig       `json:"local_progress"`
+ 	AssistantTools     assistant.Config     `json:"assistant_tools"`
+@@ -203,6 +204,7 @@ func parseConfig(raw []byte, modelOptional bool) (config, error) {
+ 		return cfg, err
+ 	}
+ 	cfg.AirPlay.defaults()
++	cfg.SmartTube.defaults()
+ 	if _, err := cfg.AirPlay.receiverConfig(); err != nil {
+ 		return cfg, err
+ 	}
+diff --git a/cmd/quasar-bridge/main.go b/cmd/quasar-bridge/main.go
+old mode 100644
+new mode 100755
+index cd50215..59a01cf
+--- a/cmd/quasar-bridge/main.go
++++ b/cmd/quasar-bridge/main.go
+@@ -186,6 +186,18 @@ func main() {
+ 			engine.AirPlay = airPlay
+ 		}
+ 	}
++	var smartTube *smartTubeControl
++	smartTube, err = newSmartTubeControl(ctx, cfg.SmartTube)
++	if err != nil {
++		slog.Error("SmartTube configuration rejected", "error", err)
++		os.Exit(1)
++	}
++	if smartTube != nil {
++		engine.SmartTube = smartTube
++		if smartTube.cancelPoller != nil {
++			defer smartTube.cancelPoller()
++		}
++	}
+ 	var musicQueue *assistant.MusicQueue
+ 	var hc *home.Controller
+ 	if endpoint := os.Getenv("QUASAR_HOME_MCP_URL"); endpoint != "" {
+diff --git a/internal/bridge/engine.go b/internal/bridge/engine.go
+old mode 100644
+new mode 100755
+index dec69a4..4a6ddc8
+--- a/internal/bridge/engine.go
++++ b/internal/bridge/engine.go
+@@ -34,6 +34,7 @@ type MusicStarter interface {
+ type Engine struct {
+ 	Configuration bool
+ 	AirPlay       AirPlayController
++	SmartTube     SmartTubeController
+ 	LLM           Completer
+ 	Assistant     Completer
+ 	Home          HomeHandler
+@@ -93,8 +94,55 @@ func (e *Engine) ResolveDecision(ctx context.Context, text string, decision Rout
+ 	if route != "llm" && !e.dialogue().Clear(ctx, ticket) {
+ 		return Resolution{Route: route}, context.Canceled
+ 	}
++
++	// If switching to music or AirPlay, pause SmartTube silently
++	if route != "smarttube" && e.SmartTube != nil && (route == "music" || route == "airplay") {
++		e.SmartTube.PauseBackground()
++	}
++
+ 	result := Resolution{Route: route}
+ 	switch route {
++	case "smarttube":
++		if e.SmartTube == nil {
++			return Resolution{Route: "yandex"}, nil
++		}
++		if decision.Source == "smarttube_search_app" {
++			app, query, _ := e.SmartTube.CanSearchApp(text)
++			answer, err := e.SmartTube.SearchApp(ctx, app, query)
++			if !e.dialogue().Current(ctx, ticket) {
++				return result, context.Canceled
++			}
++			result.Answer = answer
++			return result, err
++		}
++		if decision.Source == "smarttube_launch" {
++			app, _ := e.SmartTube.CanLaunchApp(text)
++			answer, err := e.SmartTube.LaunchApp(ctx, app)
++			if !e.dialogue().Current(ctx, ticket) {
++				return result, context.Canceled
++			}
++			result.Answer = answer
++			return result, err
++		}
++		if decision.Source == "smarttube_play" {
++			query, _ := e.SmartTube.CanPlay(text)
++			answer, err := e.SmartTube.Play(ctx, query)
++			if !e.dialogue().Current(ctx, ticket) {
++				return result, context.Canceled
++			}
++			result.Answer = answer
++			return result, err
++		}
++		action := e.SmartTube.Command(text)
++		if action == "" {
++			return result, errors.New("unknown smarttube control")
++		}
++		answer, err := e.SmartTube.ControlMedia(ctx, action)
++		if !e.dialogue().Current(ctx, ticket) {
++			return result, context.Canceled
++		}
++		result.Answer = answer
++		return result, err
+ 	case "airplay":
+ 		if e.AirPlay == nil {
+ 			return Resolution{Route: "yandex"}, nil
+@@ -262,6 +310,20 @@ func (e *Engine) Decide(ctx context.Context, text string) (decision RouteDecisio
+ 	if controller, ok := e.AirPlay.(AirPlayMediaController); ok && airPlayMediaCommand(text) != "" && controller.Active(ctx) {
+ 		return RouteDecision{Route: "airplay", Source: "airplay_media"}
+ 	}
++	if e.SmartTube != nil {
++		if _, _, ok := e.SmartTube.CanSearchApp(text); ok {
++			return RouteDecision{Route: "smarttube", Source: "smarttube_search_app"}
++		}
++		if _, ok := e.SmartTube.CanLaunchApp(text); ok {
++			return RouteDecision{Route: "smarttube", Source: "smarttube_launch"}
++		}
++		if _, ok := e.SmartTube.CanPlay(text); ok {
++			return RouteDecision{Route: "smarttube", Source: "smarttube_play"}
++		}
++		if action := e.SmartTube.Command(text); action != "" && e.SmartTube.Active(ctx) {
++			return RouteDecision{Route: "smarttube", Source: "smarttube_media"}
++		}
++	}
+ 	if e.Playback != nil && playback.Command(text) != "" && e.Playback.Active(ctx) {
+ 		return RouteDecision{Route: "playback", Source: "playback"}
+ 	}
+@@ -271,8 +333,10 @@ func (e *Engine) Decide(ctx context.Context, text string) (decision RouteDecisio
+ 		}
+ 		return d
+ 	}
+-	if len(snapshot.Messages) > 0 && dialogue.IsFollowup(text) {
+-		return RouteDecision{Route: "llm", Source: "dialogue"}
++	if len(snapshot.Messages) > 0 {
++		if !p.classifierEnabled || dialogue.IsFollowup(text) {
++			return RouteDecision{Route: "llm", Source: "dialogue"}
++		}
+ 	}
+ 	if !p.classifierEnabled {
+ 		return RouteDecision{Route: p.defaultRoute, Source: "default"}
+diff --git a/internal/bridge/native.go b/internal/bridge/native.go
+old mode 100644
+new mode 100755
+index 5d30ab8..6d2cb5a
+--- a/internal/bridge/native.go
++++ b/internal/bridge/native.go
+@@ -548,11 +548,11 @@ func (n *Native) maybeResolve(p *nativeRequest) {
+ 			if routed, ok := n.resolver.(RoutedResolver); ok {
+ 				decision := routed.Decide(p.ctx, text)
+ 				n.mu.Lock()
+-				p.listenOnStreamStart = decision.Source == "dialogue_retry"
++				p.listenOnStreamStart = decision.Route == "llm" || decision.Source == "dialogue_retry"
+ 				n.mu.Unlock()
+ 				slog.Info("native_route_decision", "request", requestTag(p.id), "route", decision.Route, "source", decision.Source)
+ 				stop := func() {}
+-				if decision.Route != "yandex" && n.ProgressAfter > 0 {
++				if decision.Route != "yandex" && decision.Source != "smarttube_media" && decision.Source != "smarttube_launch" && decision.Source != "airplay_media" && decision.Route != "playback" && n.ProgressAfter > 0 {
+ 					stop = n.progress(p)
+ 				}
+ 				result, err = routed.ResolveDecision(p.ctx, text, decision)
+@@ -574,6 +574,8 @@ func (n *Native) maybeResolve(p *nativeRequest) {
+ 				result.Answer = "Не удалось подтвердить выполнение команды в умном доме."
+ 			} else if result.Route == "airplay" {
+ 				result.Answer = "Не удалось изменить состояние AirPlay. Проверьте журнал Quasar Bridge."
++			} else if result.Route == "smarttube" {
++				result.Answer = "Не удалось выполнить команду для YouTube."
+ 			} else if result.Route == "music" {
+ 				result.Answer = "Не удалось включить музыку с этой страницы."
+ 			} else {
+@@ -645,12 +647,15 @@ func (n *Native) reply(p *nativeRequest, text string) error {
+ 		requestID = p.id
+ 	}
+ 	answer := &response.TAliceResponseProto{Header: &response.TAliceResponseProto_THeader{RequestId: new(requestID), ResponseId: new(newID()), DialogId: new(p.request.GetHeader().GetDialogId()), SequenceNumber: new(p.request.GetHeader().GetSequenceNumber())}, VoiceResponse: &response.TAliceResponseProto_TVoiceResponse{OutputSpeech: &response.TAliceResponseProto_TVoiceResponse_TOutputSpeech{Text: new(text)}, HasVoiceResponse: true}, Response: &response.TAliceResponseProto_TResponse{Cards: []*response.TAliceResponseProto_TResponse_TCard{{Type: "simple_text", Text: new(text), CardId: new(newID())}}}}
+-	silentPlayback := n.hasSilentPlayback(p)
++	silentPlayback := n.hasSilentPlayback(p) || text == ""
+ 	answer.VoiceResponse.ShouldListen = n.ShouldListen && !silentPlayback && reply.ListeningAllowed(p.ctx)
+ 	if silentPlayback {
+ 		answer.VoiceResponse.HasVoiceResponse = false
+ 		answer.VoiceResponse.OutputSpeech.Text = new("")
+ 	}
++	if text == "" {
++		answer.Response.Cards = nil
++	}
+ 	answer.Response.Directives = n.takeSound(p)
+ 	m := &server.TServerMessage{Message: &server.TServerMessage_Event{Event: &server.TServerMessage_TEvent{Header: &header.TEventHeader{MessageId: newID(), RefMessageId: p.id}, Event: &server.TServerMessage_TEvent_AliceResponse{AliceResponse: answer}}}}
+ 	b, err := (wire.Frame{Server: m, Prefix: []byte("AAPI")}).Marshal()
+diff --git a/internal/bridge/progress.go b/internal/bridge/progress.go
+index c47fc21..9b13588 100644
+--- a/internal/bridge/progress.go
++++ b/internal/bridge/progress.go
+@@ -150,6 +150,12 @@ func (n *Native) finishDeferred(p *nativeRequest, text string) error {
+ 		return p.ctx.Err()
+ 	case <-p.progressAudioDone:
+ 	}
++	if text == "" {
++		if n.hasSilentPlayback(p) {
++			_ = n.finishSilentAudio(p)
++		}
++		return n.deferredPart(p, "", true)
++	}
+ 	if n.hasSilentPlayback(p) {
+ 		if err := n.finishSilentAudio(p); err != nil {
+ 			return err
+diff --git a/internal/bridge/progress_test.go b/internal/bridge/progress_test.go
+index 12490c5..203b9c8 100644
+--- a/internal/bridge/progress_test.go
++++ b/internal/bridge/progress_test.go
+@@ -87,7 +87,7 @@ func testSlowLocalRequest(t *testing.T, finalStream uint32, omitID, voice, shoul
+ 	if initial.Kind() != "AliceResponse" || !initial.Server.GetEvent().GetAliceResponse().GetResponse().GetIsStreaming() {
+ 		t.Fatal("missing initial streaming response")
+ 	}
+-	if initial.Server.GetEvent().GetAliceResponse().GetVoiceResponse().GetShouldListen() {
++	if got := initial.Server.GetEvent().GetAliceResponse().GetVoiceResponse().GetShouldListen(); got != shouldListen {
+ 		t.Fatal("initial streaming response reopened listening")
+ 	}
+ 	part := next().Server.GetEvent().GetDeferredAliceResponse()
+diff --git a/internal/bridge/routing.go b/internal/bridge/routing.go
+index f9fc59b..3593c26 100644
+--- a/internal/bridge/routing.go
++++ b/internal/bridge/routing.go
+@@ -112,7 +112,7 @@ func DefaultRoutingConfig() RoutingConfig {
+ 		Refusal:      RefusalConfig{Enabled: true, Prefixes: []string{"не могу", "я не могу", "я не буду", "не буду", "не поняла", "я не поняла", "не понял", "я не понял", "извините", "простите", "к сожалению", "не знаю", "я не знаю", "я пока не умею", "пока не умею", "увы"}, ContainsAny: []string{"не могу помочь", "не могу обсуждать", "не могу выполнить", "не могу понять", "не могу ответить", "не буду отвечать", "не поняла", "не понял", "не понимаю", "не удалось понять", "не знаю", "не умею", "не отвечу"}},
+ 	}
+ }
+-func directRoute(route string) bool { return route == "home" || route == "llm" || route == "yandex" }
++func directRoute(route string) bool { return route == "home" || route == "llm" || route == "yandex" || route == "smarttube" }
+ func foldTerms(terms []string, refusal bool) ([]string, error) {
+ 	out := make([]string, len(terms))
+ 	for i, term := range terms {

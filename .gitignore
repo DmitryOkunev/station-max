@@ -1,0 +1,47 @@
+# macOS metadata
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Local environment / saved targets
+.station_env
+*.tmp
+*.log
+bot.env
+
+# Agent & local IDE settings
+.agents/
+.gemini/
+.mcp.json
+
+# Graphify knowledge graph
+graphify-out/
+
+# Local helper scripts
+unlock_and_restore.sh
+
+# Build & test temporary files
+/tmp/
+__pycache__/
+*.pyc
+.pytest_cache/
+.panel_journal.jsonl
+
+# Certificates, private keys & proprietary files
+certs/*.key
+certs/*.pem
+certs/*.crt
+certs/*.cer
+*.key
+*.pem
+*.crt
+!certs/README.md
+
+# Official firmware archives & OTA files
+*.zip
+ota/
+5000000921.zip
+
+# Quasar logs
+conversations.jsonl

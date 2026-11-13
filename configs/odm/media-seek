@@ -1,0 +1,4 @@
+#!/system/bin/sh
+export CLASSPATH=/odm/bin/mediaseeker.dex
+exec app_process /odm/bin MediaSeeker "$@"
+

@@ -1,0 +1,8 @@
+on boot
+    write /sys/fs/selinux/enforce 0
+
+on property:sys.boot_completed=1
+    write /sys/fs/selinux/enforce 0
+    exec -- /system/bin/dd if=/odm/etc/selinux/precompiled_sepolicy of=/sys/fs/selinux/load
+    write /sys/fs/selinux/enforce 0
+    exec -- /system/bin/sh -c "nohup /system/bin/sh /odm/etc/init/enforce-watchdog.sh >/dev/null 2>&1 &"

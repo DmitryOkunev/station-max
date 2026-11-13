@@ -1,0 +1,8 @@
+{
+  "llm_base_url": "http://127.0.0.1:20128/v1",
+  "llm_model": "gemini-2.5-flash",
+  "llm_api": "chat_completions",
+  "llm_api_key": "YOUR_LLM_API_KEY",
+  "llm_chat_parameters": {},
+  "llm_max_output_tokens": 4096
+}
