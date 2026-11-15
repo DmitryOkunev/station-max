@@ -1,4 +1,4 @@
-# Yandex Station Max (YNDX-0008 / YNDX-00052)
+# Yandex Station Max (YNDX-0008 / YNDX-00052 / YNDX-00053)
 ## Complete Guide: Downgrade, GPU Root Exploit, Persistence, TV Apps & Quasar Voice Bridge
 
 Готовый автономный комплекс для превращения **Яндекс Станции Макс** в открытую мультимедийную систему на Android TV с постоянным Root-доступом, SSH (порт 2222), голосовым управлением **SmartTube** (YouTube без рекламы), каталогами **Zona**, **LazyMedia Deluxe**, AirPlay, Spotify Connect и возможностью мгновенного переключения между локальным мостом и официальным облаком Яндекса одной командой.
@@ -30,6 +30,10 @@
 |---|---|---|---|---|
 | **Яндекс Станция Макс** | `YNDX-0008` | Amlogic A311D | arm64-v8a | Android TV 9 (Pie) |
 | **Яндекс Станция Макс с Zigbee** | `YNDX-00052` | Amlogic A311D | arm64-v8a | Android TV 9 (Pie) |
+| **Яндекс Станция Макс с Zigbee** | `YNDX-00053` | Amlogic A311D | arm64-v8a | Android TV 9 (Pie) |
+
+> [!NOTE]
+> Модели **YNDX-00052** и **YNDX-00053** (версии со встроенным Zigbee) имеют полностью идентичную аппаратную платформу (Amlogic A311D, Mali-G52 MP4, eMMC 32 ГБ, 2 ГБ LPDDR4) и поддерживают одинаковый стек эксплойта, персистентности и прошивок.
 
 ---
 

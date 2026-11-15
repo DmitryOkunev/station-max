@@ -4,7 +4,7 @@ Before using grep, glob, or reading multiple source files to understand the code
 2. Use `graphify query "<question>"` or `graphify path <A> <B>` via bash tool to find exact files and dependencies.
 3. Read only the specific files identified by the graph.
 # AGENT.MD: Autonomous Engineering & Operational Manual
-## Yandex Station Max (YNDX-0008 / YNDX-00052) Root, Persistence & TV Voice Bridge
+## Yandex Station Max (YNDX-0008 / YNDX-00052 / YNDX-00053) Root, Persistence & TV Voice Bridge
 
 This document is the authoritative engineering manual for AI agents and automated systems interacting with, modifying, maintaining, or recovering Yandex Station Max devices.
 
@@ -14,7 +14,7 @@ This document is the authoritative engineering manual for AI agents and automate
 
 ```
 Hardware:
-  - Models: YNDX-0008 (Base Max), YNDX-00052 (Max with Zigbee)
+  - Models: YNDX-0008 (Base Max), YNDX-00052 / YNDX-00053 (Max with Zigbee)
   - SoC: Amlogic A311D (4x Cortex-A73 @ 2.2 GHz + 2x Cortex-A53 @ 1.8 GHz)
   - GPU: ARM Mali-G52 MP4 (Driver /dev/mali0)
   - RAM: 2 GB LPDDR4
