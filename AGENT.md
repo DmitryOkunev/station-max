@@ -22,9 +22,11 @@ Hardware:
   - OS: Android TV 9 (Pie), 64-bit (kernel 4.9.113)
   - Architecture: arm64-v8a
 
-Firmware Target:
-  - Exploitable Build: 5000000921 (ro.build.display.id)
-  - Kernel SELinux Pointer: 0x291352c (physical/kernel virtual offset for selinux_enforcing)
+Firmware Targets & Kernel Exploit Offsets:
+  - Build 5000000921 (ro.build.display.id contains 5000000921):
+    - Kernel SELinux Pointer: 0x291352c (physical/kernel virtual offset for selinux_enforcing)
+  - Build 20201111 (PPR1.180610.011.20201111, release firmware for YNDX-0008):
+    - Kernel SELinux Pointer: 0x2a5052c (physical/kernel virtual offset for selinux_enforcing)
 ```
 
 ---
@@ -55,7 +57,7 @@ Firmware Target:
 > **RULE 3: COLD-BOOT SELINUX RACE CONDITION & ORDERING**
 > 1. The Android 9 kernel always cold boots in `Enforcing` mode.
 > 2. `rootd` starts at `sys.boot_completed=1` via `/odm/etc/init/rootd.rc`.
-> 3. `fix-enforce.sh` must execute `permissive esc-flip 0x291352c 1 0` repeatedly until `cat /sys/fs/selinux/enforce` equals `0` (typically 5–15 seconds, 2–3 Mali cycles).
+> 3. `fix-enforce.sh` must execute `permissive esc-flip <OFFSET> 1 0` repeatedly until `cat /sys/fs/selinux/enforce` equals `0` (typically 5–15 seconds, 2–3 Mali cycles; dynamically resolves `0x291352c` for 5000000921 or `0x2a5052c` for 20201111).
 > 4. `start-dropbear.sh` **must loop and wait** for `enforce == 0` before attempting bind mounts, host key generation, or socket binding.
 > 5. `fix-enforce.sh` triggers `start-dropbear.sh &` immediately once `enforce == 0` is reached.
 

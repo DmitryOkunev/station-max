@@ -100,7 +100,7 @@ In accordance with **Hard Invariant Rule 1** (Never modify `/system`, `/vendor`,
 ### 3.1 Cold Boot Sequence
 1. Kernel boots in SELinux `Enforcing` mode.
 2. `/odm/etc/init/rootd.rc` starts `rootd` at `sys.boot_completed=1`.
-3. `fix-enforce.sh` flips kernel memory at `0x291352c` via Mali GPU esc-flip exploit until SELinux is `Permissive`.
+3. `fix-enforce.sh` flips kernel memory (`0x291352c` on 5000000921, `0x2a5052c` on 20201111) via Mali GPU esc-flip exploit until SELinux is `Permissive`.
 4. `start-dropbear.sh` runs once `enforce == 0`, binds Dropbear SSH (:2222), and launches `/odm/bin/start-airplay2.sh &`.
 5. `/odm/bin/start-airplay2.sh`:
    * Verifies `enforce == 0` (Permissive mode).
