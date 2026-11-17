@@ -84,6 +84,9 @@ type nativeRequest struct {
 	rule                            string
 	detector                        *whisperDetector
 	isWhisper                       bool
+	streamSentCount                 int
+	streamRecvCount                 int
+	streamSentDone                  bool
 }
 type Native struct {
 	connectionScope   string
@@ -413,6 +416,25 @@ func (n *Native) Server(ctx context.Context, k websocket.MessageType, data []byt
 					n.mu.Unlock()
 					return nil
 				}
+				if !p.audioIsProgress {
+					p.streamRecvCount++
+					isLast := (p.streamSentCount == 0) || (p.streamSentDone && p.streamRecvCount >= p.streamSentCount)
+					if !isLast {
+						if tail := p.audio.flushPending(0, 0); len(tail) > 0 {
+							if err := n.down(ctx, k, append(binary.BigEndian.AppendUint32(nil, p.audioStream), tail...)); err != nil {
+								n.mu.Unlock()
+								return err
+							}
+						}
+						if !p.audioWaiting {
+							p.audioWaiting = true
+							n.waitAudio(p)
+						}
+						n.mu.Unlock()
+						return nil
+					}
+				}
+				p.audioWaiting = false
 				end := p.audio.finish()
 				if err := n.down(ctx, k, append(binary.BigEndian.AppendUint32(nil, p.audioStream), end...)); err != nil {
 					n.mu.Unlock()
@@ -668,7 +690,8 @@ func (n *Native) maybeResolve(p *nativeRequest) {
 				n.mu.Unlock()
 				slog.Info("native_route_decision", "request", requestTag(p.id), "route", decision.Route, "rule", decision.Rule, "source", decision.Source, "text", text, "is_whisper", p.isWhisper)
 				stop := func() {}
-				if decision.Route != "yandex" && decision.Source != "smarttube_media" && decision.Source != "smarttube_launch" && decision.Source != "airplay_media" && decision.Route != "playback" && n.ProgressAfter > 0 && (decision.Route != "llm" || llmStreamEnabled()) {
+				isLLMStreamDecision := llmStreamEnabled() && decision.Route == "llm" && (decision.Rule == "ask_llm_slysh" || decision.Rule == "ask_llm_podskazhi")
+				if decision.Route != "yandex" && decision.Source != "smarttube_media" && decision.Source != "smarttube_launch" && decision.Source != "airplay_media" && decision.Route != "playback" && n.ProgressAfter > 0 && !isLLMStreamDecision {
 					stop = n.progress(p)
 				}
 				if beep := beepProbePath(text); beep != "" {
@@ -678,7 +701,11 @@ func (n *Native) maybeResolve(p *nativeRequest) {
 					}
 					return
 				}
-				result, err = routed.ResolveDecision(p.ctx, text, decision)
+				if isLLMStreamDecision {
+					result = Resolution{Route: decision.Route, Rule: decision.Rule}
+				} else {
+					result, err = routed.ResolveDecision(p.ctx, text, decision)
+				}
 				stop()
 			} else {
 				result, err = n.resolver.Resolve(p.ctx, text)
@@ -752,7 +779,7 @@ func (n *Native) maybeResolve(p *nativeRequest) {
 			}
 		}
 		p.local = true
-		if !p.streaming && !isLLMStream {
+		if !p.streaming {
 			p.ttsID = newID()
 			n.tts[p.ttsID] = p
 		}
@@ -788,6 +815,34 @@ func (n *Native) replyStreamSentence(p *nativeRequest, sentence string, last boo
 		n.mu.Lock()
 		p.ttsID = newID()
 		n.tts[p.ttsID] = p
+		p.streamSentCount++
+		n.mu.Unlock()
+	} else {
+		n.mu.Lock()
+		p.streamSentDone = true
+		if p.streaming && p.audioStarted && p.streamRecvCount >= p.streamSentCount {
+			p.audioWaiting = false
+			end := p.audio.finish()
+			if len(end) > 0 {
+				_ = n.down(p.ctx, websocket.MessageBinary, append(binary.BigEndian.AppendUint32(nil, p.audioStream), end...))
+			}
+			mClose := &server.TServerMessage{
+				Message: &server.TServerMessage_StreamControl{
+					StreamControl: &stream.TStreamControl{
+						MessageId: p.id,
+						StreamId:  int64(p.audioStream),
+						Action:    &stream.TStreamControl_Close{Close: &stream.TStreamControl_TActionClose{}},
+					},
+				},
+			}
+			bClose, errClose := (wire.Frame{Server: mClose, Prefix: []byte("AAPI")}).Marshal()
+			n.mu.Unlock()
+			if errClose == nil {
+				_ = n.down(p.ctx, websocket.MessageBinary, bClose)
+			}
+			reply.Delivered(p.ctx)
+			return n.deferredPart(p, "", true)
+		}
 		n.mu.Unlock()
 	}
 	if err := n.deferredPart(p, sentence, last); err != nil {
