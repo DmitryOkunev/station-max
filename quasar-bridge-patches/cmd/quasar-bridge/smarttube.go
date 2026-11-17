@@ -39,9 +39,10 @@ func (c *smartTubeControl) playSmartTube(ctx context.Context, query string) (str
 			startCmd = fmt.Sprintf("am start -n %s", splashActivity)
 		} else {
 			encoded := url.QueryEscape(q)
-			targetURL := fmt.Sprintf("youtube://search?query=%s\\&method=play", encoded)
+			targetURL := fmt.Sprintf("youtube://search?query=%s&method=play", encoded)
 			startCmd = fmt.Sprintf("am start -a android.intent.action.VIEW -d '%s' -n %s", targetURL, splashActivity)
 		}
+		slog.Info("smarttube_launch_intent", "query", q, "package", targetPkg, "cmd", startCmd)
 		_, err := c.runADB(bgCtx, startCmd)
 		if err != nil {
 			slog.Warn("smarttube_start_failed", "package", targetPkg, "error", err)
