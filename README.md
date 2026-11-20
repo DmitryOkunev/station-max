@@ -28,12 +28,12 @@
 
 | Модель | Кодовое имя | SoC | Архитектура | ОС |
 |---|---|---|---|---|
-| **Яндекс Станция Макс** | `YNDX-0008` | Amlogic A311D | arm64-v8a | Android TV 9 (Pie) |
-| **Яндекс Станция Макс с Zigbee** | `YNDX-00052` | Amlogic A311D | arm64-v8a | Android TV 9 (Pie) |
-| **Яндекс Станция Макс с Zigbee** | `YNDX-00053` | Amlogic A311D | arm64-v8a | Android TV 9 (Pie) |
+| **Яндекс Станция Макс** | `YNDX-0008` | Amlogic S905X2 | arm64-v8a | Android TV 9 (Pie) |
+| **Яндекс Станция Макс с Zigbee** | `YNDX-00052` | Amlogic S905X2 | arm64-v8a | Android TV 9 (Pie) |
+| **Яндекс Станция Макс с Zigbee** | `YNDX-00053` | Amlogic S905X2 | arm64-v8a | Android TV 9 (Pie) |
 
 > [!NOTE]
-> Модели **YNDX-00052** и **YNDX-00053** (версии со встроенным Zigbee) имеют полностью идентичную аппаратную платформу (Amlogic A311D, Mali-G52 MP4, eMMC 32 ГБ, 2 ГБ LPDDR4) и поддерживают одинаковый стек эксплойта, персистентности и прошивок.
+> Модели **YNDX-00052** и **YNDX-00053** (версии со встроенным Zigbee) имеют полностью идентичную аппаратную платформу (Amlogic S905X2, Mali-G31 MP2, 2 ГБ LPDDR4) и поддерживают одинаковый стек эксплойта, персистентности и прошивок.
 
 ### Поддерживаемые сборки прошивки и оффсеты ядра
 
@@ -558,7 +558,7 @@ station-stream yandex <STATION_IP>
 | Компонент / Модуль | Описание и назначение | Источник / Upstream | Лицензия |
 |---|---|---|---|
 | **Quasar Bridge** | WebSocket-проксирование протокола голосового движка io_device | Исследования протокола UniProxy и открытые наработки сообщества | MIT |
-| **Mali GPU Exploit (`permissive`)** | Переключение SELinux в Permissive через видеоядро ARM Mali-G52 | Исследование уязвимости ядра Linux и драйвера `/dev/mali0` | Open Source |
+| **Mali GPU Exploit (`permissive`)** | Переключение SELinux в Permissive через видеоядро ARM Mali (Mali-G31 / Bifrost) | Исследование уязвимости ядра Linux и драйвера `/dev/mali0` | Open Source |
 | **Dropbear SSH** | Легковесный SSH-сервер и клиент для встраиваемых систем | [Dropbear SSH](https://matt.ucc.asn.au/dropbear/dropbear.html) (Matt Johnston) | MIT-style |
 | **Shairport Sync (AirPlay 2)** | Нативный приемник аудиопотоков Apple AirPlay 2 | [Shairport Sync](https://github.com/mikebrady/shairport-sync) (Mike Brady) | MIT / BSD |
 | **NQPTP** | Синхронизация тактовой частоты по стандарту IEEE 1588 PTP | [NQPTP](https://github.com/mikebrady/nqptp) (Mike Brady) | GPL-2.0 |

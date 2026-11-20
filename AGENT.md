@@ -15,10 +15,10 @@ This document is the authoritative engineering manual for AI agents and automate
 ```
 Hardware:
   - Models: YNDX-0008 (Base Max), YNDX-00052 / YNDX-00053 (Max with Zigbee)
-  - SoC: Amlogic A311D (4x Cortex-A73 @ 2.2 GHz + 2x Cortex-A53 @ 1.8 GHz)
-  - GPU: ARM Mali-G52 MP4 (Driver /dev/mali0)
+  - SoC: Amlogic S905X2 (4x Cortex-A53 @ 1.8 GHz, G12A family)
+  - GPU: ARM Mali-G31 MP2 (Driver /dev/mali0)
   - RAM: 2 GB LPDDR4
-  - Storage: 32 GB eMMC 5.1
+  - Storage: 16 GB eMMC 5.1
   - OS: Android TV 9 (Pie), 64-bit (kernel 4.9.113)
   - Architecture: arm64-v8a
 
@@ -79,7 +79,7 @@ sequenceDiagram
     participant Agent as Autonomous Agent
     participant FQ as Fakequasar (Server)
     participant Station as Station Max (Android 9)
-    participant GPU as Mali-G52 (/dev/mali0)
+    participant GPU as Mali-G31 (/dev/mali0)
     participant Kernel as Linux Kernel 4.9
 
     Agent->>FQ: Deploy Nginx + Certs + DNSmasq (Step 01)
