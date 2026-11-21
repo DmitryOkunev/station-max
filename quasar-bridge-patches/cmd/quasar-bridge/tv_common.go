@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -99,7 +100,21 @@ func newSmartTubeControl(app context.Context, cfg smartTubeConfig) (*smartTubeCo
 	return ctrl, nil
 }
 
+func (c *smartTubeControl) isLocal() bool {
+	addr := strings.TrimSpace(c.cfg.ADBAddress)
+	return addr == "local" || addr == "localhost" || addr == "127.0.0.1" || addr == ""
+}
+
 func (c *smartTubeControl) runADB(ctx context.Context, shellCmd string) (string, error) {
+	if c.isLocal() {
+		shPath := "/system/bin/sh"
+		if _, err := os.Stat(shPath); err != nil {
+			shPath = "/bin/sh"
+		}
+		cmd := exec.CommandContext(ctx, shPath, "-c", shellCmd)
+		out, err := cmd.CombinedOutput()
+		return string(out), err
+	}
 	cmd := exec.CommandContext(ctx, "adb", "-s", c.cfg.ADBAddress, "shell", shellCmd)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -120,6 +135,9 @@ func (c *smartTubeControl) runADB(ctx context.Context, shellCmd string) (string,
 }
 
 func (c *smartTubeControl) stationHost() string {
+	if c.isLocal() {
+		return "127.0.0.1"
+	}
 	addr := c.cfg.ADBAddress
 	if host, _, err := net.SplitHostPort(addr); err == nil && host != "" {
 		return host

@@ -69,3 +69,8 @@ if [ -x /odm/bin/start-airplay2.sh ]; then
     /odm/bin/start-airplay2.sh &
 fi
 
+# 8. Launch Standalone Quasar Bridge daemon if present
+if [ -x /odm/bin/start-quasar.sh ]; then
+    /odm/bin/start-quasar.sh &
+fi
+
