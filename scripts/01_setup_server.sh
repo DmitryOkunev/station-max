@@ -45,7 +45,8 @@ import json
 path = '/opt/fakequasar/real_sync_info.json'
 with open(path) as f:
     d = json.load(f)
-d['config']['system_config']['adbd'] = {'remoteActivation': True, 'network': True}
+d['config']['system_config']['adbd'] = {'remoteActivation': True, 'network': True, 'fullDurationMs': 31536000000}
+d['adbd'] = {'remoteActivation': True, 'network': True, 'fullDurationMs': 31536000000}
 d['config']['system_config']['uniProxyUrl'] = 'ws://${SERVER_IP}:8443/uni.ws'
 with open(path, 'w') as f:
     json.dump(d, f)
