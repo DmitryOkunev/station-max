@@ -36,6 +36,23 @@ SEOF
     mount --bind /data/dropbear/etc /system/etc
 fi
 
+# Ensure /odm/bin is in mkshrc for interactive subshells
+if [ -f /data/dropbear/etc/mkshrc ] && ! grep -q "/odm/bin" /data/dropbear/etc/mkshrc; then
+    echo "export PATH=/sbin:/system/sbin:/system/bin:/system/xbin:/vendor/bin:/vendor/xbin:/odm/bin:/data/local/tmp:\$PATH" >> /data/dropbear/etc/mkshrc
+fi
+
+# Ensure root .bashrc exists
+if [ ! -f /data/dropbear/.bashrc ]; then
+    cat << "BEOF" > /data/dropbear/.bashrc
+export PATH=/sbin:/system/sbin:/system/bin:/system/xbin:/vendor/bin:/vendor/xbin:/odm/bin:/data/local/tmp:\$PATH
+export HOME=/data/dropbear
+export TERM=xterm-256color
+alias ll="ls -la"
+alias bb="/vendor/xbin/busybox"
+BEOF
+    chmod 644 /data/dropbear/.bashrc
+fi
+
 # CRITICAL: Preserve execute permissions on directories!
 # Never do "chmod 644 /data/dropbear/etc/*" as it strips +x from permissions/cacerts/selinux!
 find /data/dropbear/etc -type d -exec chmod 755 {} +

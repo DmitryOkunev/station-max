@@ -199,6 +199,8 @@ sequenceDiagram
 | `/odm/bin/start-dropbear.sh` | Dropbear startup & bind-mount | `755`, `u:object_r:adbd_exec:s0` |
 | `/odm/bin/start-airplay2.sh` | AirPlay 2 persistent ODM launcher | `755`, `u:object_r:adbd_exec:s0` |
 | `/odm/bin/su` | Dropbear-backed su wrapper | `755`, `u:object_r:adbd_exec:s0` |
+| `/odm/bin/bash` | Static Bash 5.2 shell (arm64) | `755`, `u:object_r:adbd_exec:s0` |
+| `/odm/bin/neofetch` | Station Max Neofetch CLI | `755`, `u:object_r:adbd_exec:s0` |
 | `/odm/etc/init/rootd.rc` | Init service definition | `644`, `u:object_r:vendor_configs_file:s0` |
 | `/odm/etc/init/zz-adbd.rc` | ADB persistent properties | `644`, `u:object_r:vendor_configs_file:s0` |
 | `/odm/etc/init/zz-permissive.rc` | Permissive init trigger | `644`, `u:object_r:vendor_configs_file:s0` |
