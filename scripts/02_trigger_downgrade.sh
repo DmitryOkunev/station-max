@@ -30,7 +30,13 @@ if [ ! -f "${OTA_FILE}" ]; then
 fi
 
 SIZE=$(stat -c%s "${OTA_FILE}" 2>/dev/null || stat -f%z "${OTA_FILE}")
-echo "[+] Firmware found: ${OTA_FILE} (${SIZE} bytes)"
+CRC32=$(python3 -c "import zlib; f=open('${OTA_FILE}','rb'); c=0
+while True:
+    b=f.read(1048576)
+    if not b: break
+    c=zlib.crc32(b, c)
+print(c)" 2>/dev/null || echo 0)
+echo "[+] Firmware found: ${OTA_FILE} (${SIZE} bytes, CRC32: ${CRC32})"
 
 # 2. Record initial Nginx log line positions (prevents matching historical downloads)
 LOG_QUASAR="/var/log/nginx/quasar.yandex.net.access.log"
@@ -81,14 +87,54 @@ server {
     access_log /var/log/nginx/quasar.yandex.net.access.log;
     error_log  /var/log/nginx/quasar.yandex.net.error.log;
 
+    location = /generate_204 {
+        return 204;
+    }
+
     location = /check_updates {
         default_type application/json;
         add_header Cache-Control "no-store";
-        return 200 '{"hasUpdate":true,"updateId":"150484","version":"5000000921","downloadUrl":"https://quasar.yandex.net/yandexstation_2/ota/5000000921.zip","fallbackUrl":"http://${SERVER_IP}/yandexstation_2/ota/5000000921.zip","fallbackIp":"${SERVER_IP}","size":${SIZE},"critical":true}';
+        return 200 '{"hasUpdate":true,"updateId":"150484","version":"5000000921","downloadUrl":"https://quasar.yandex.net/yandexstation_2/ota/5000000921.zip","fallbackUrl":"http://${SERVER_IP}/yandexstation_2/ota/5000000921.zip","fallbackIp":"${SERVER_IP}","size":${SIZE},"crc32":${CRC32},"critical":true}';
+    }
+
+    location = /allow_update {
+        default_type application/json;
+        add_header Cache-Control "no-store";
+        return 200 '{"allow":true}';
+    }
+
+    location = /confirm_update {
+        default_type application/json;
+        add_header Cache-Control "no-store";
+        return 200 'true';
+    }
+
+    location = /get_sync_info {
+        default_type application/json;
+        add_header Cache-Control "no-store";
+        alias /opt/fakequasar/real_sync_info.json;
     }
 
     location = /yandexstation_2/ota/5000000921.zip {
         alias /opt/fakequasar/ota/5000000921.zip;
+    }
+
+    # Proxy all other endpoints directly to real Yandex to preserve connectivity
+    location / {
+        resolver 77.88.8.8 1.1.1.1 ipv6=off valid=300s;
+        proxy_pass https://\$host\$request_uri;
+        proxy_http_version 1.1;
+        proxy_ssl_server_name on;
+        proxy_ssl_name \$host;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_set_header Host \$host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For \$remote_addr;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
     }
 }
 server {
@@ -96,6 +142,10 @@ server {
     server_name quasar.yandex.net quasar.yandex.ru scbh.yandex.net;
 
     access_log /var/log/nginx/quasar.yandex.net.access.log;
+
+    location = /generate_204 {
+        return 204;
+    }
 
     location = /yandexstation_2/ota/5000000921.zip {
         alias /opt/fakequasar/ota/5000000921.zip;
