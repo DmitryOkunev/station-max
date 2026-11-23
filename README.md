@@ -1,6 +1,15 @@
 # Yandex Station Max (YNDX-0008 / YNDX-00052 / YNDX-00053)
 ## Complete Guide: Downgrade, GPU Root Exploit, Persistence, TV Apps & Quasar Voice Bridge
 
+<p align="left">
+  <a href="https://t.me/YaMaxR00t" target="_blank">
+    <img src="https://img.shields.io/badge/Telegram-Чат_сообщества_YaMaxR00t-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram Chat">
+  </a>
+</p>
+
+> [!TIP]
+> 💬 **Telegram-сообщество проекта:** Помощь в установке, обсуждение рута, свежие прошивки и модули для Станции Макс — присоединяйтесь: **[t.me/YaMaxR00t](https://t.me/YaMaxR00t)** (@YaMaxR00t)
+
 Готовый автономный комплекс для превращения **Яндекс Станции Макс** в открытую мультимедийную систему на Android TV с постоянным Root-доступом, SSH (порт 2222), голосовым управлением **SmartTube** (YouTube без рекламы), каталогами **Zona**, **LazyMedia Deluxe**, AirPlay, Spotify Connect и возможностью мгновенного переключения между локальным мостом и официальным облаком Яндекса одной командой.
 
 ---
