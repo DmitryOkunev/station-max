@@ -59,18 +59,24 @@ find /data/dropbear/etc -type d -exec chmod 755 {} +
 find /data/dropbear/etc -type f -exec chmod 644 {} +
 chcon -R u:object_r:system_file:s0 /data/dropbear/etc
 
-# 4. Host keys
+# 4. Host keys & su authentication key
 HK_ED25519="/data/dropbear/dropbear_ed25519_host_key"
 HK_RSA="/data/dropbear/dropbear_rsa_host_key"
+SU_KEY="/data/dropbear/id_su"
 
-[ -x /odm/bin/dropbearkey ] && DBK=/odm/bin/dropbearkey || DBK=/data/local/tmp/dropbearmulti
-[ -x /odm/bin/dropbear ] && DBB=/odm/bin/dropbear || DBB=/data/local/tmp/dropbearmulti
+[ -x /odm/bin/dropbearkey ] && DBK="/odm/bin/dropbearkey" || ([ -x /data/local/tmp/dropbearkey ] && DBK="/data/local/tmp/dropbearkey" || DBK="/data/local/tmp/dropbearmulti dropbearkey")
+[ -x /odm/bin/dropbear ] && DBB="/odm/bin/dropbear" || ([ -x /data/local/tmp/dropbear ] && DBB="/data/local/tmp/dropbear" || DBB="/data/local/tmp/dropbearmulti dropbear")
 
 if [ ! -f "$HK_ED25519" ]; then
-    "$DBK" -t ed25519 -f "$HK_ED25519"
+    $DBK -t ed25519 -f "$HK_ED25519"
 fi
 if [ ! -f "$HK_RSA" ]; then
-    "$DBK" -t rsa -s 2048 -f "$HK_RSA"
+    $DBK -t rsa -s 2048 -f "$HK_RSA"
+fi
+if [ ! -f "$SU_KEY" ]; then
+    $DBK -t ed25519 -f "$SU_KEY"
+    $DBK -y -f "$SU_KEY" 2>/dev/null | grep "^ssh-" >> /data/dropbear/.ssh/authorized_keys || true
+    chmod 600 "$SU_KEY"
 fi
 
 # 5. Standard Android PATH

@@ -287,9 +287,12 @@ if [ "$UPDATE_STATION" = true ] && [ -n "${STATION_IP}" ]; then
         ssh -p 2222 "root@${STATION_IP}" "cat > /data/local/tmp/rootd.rc" < "${BASE_DIR}/configs/odm/rootd.rc"
         ssh -p 2222 "root@${STATION_IP}" "cat > /data/local/tmp/zz-adbd.rc" < "${BASE_DIR}/configs/odm/zz-adbd.rc"
         ssh -p 2222 "root@${STATION_IP}" "cat > /data/local/tmp/zz-permissive.rc" < "${BASE_DIR}/configs/odm/zz-permissive.rc"
+        [ -f "${BASE_DIR}/binaries/permissive" ] && ssh -p 2222 "root@${STATION_IP}" "cat > /data/local/tmp/permissive && chmod 755 /data/local/tmp/permissive" < "${BASE_DIR}/binaries/permissive" || true
         
         ssh -p 2222 "root@${STATION_IP}" '
             mount -o remount,rw /odm
+            [ -f /data/local/tmp/permissive ] && cp /data/local/tmp/permissive /odm/bin/permissive
+            [ -f /odm/bin/dropbearmulti ] && ln -sf /odm/bin/dropbearmulti /odm/bin/dbclient
             cp /data/local/tmp/fix-enforce.sh /odm/bin/fix-enforce.sh
             cp /data/local/tmp/start-dropbear.sh /odm/bin/start-dropbear.sh
             cp /data/local/tmp/start-airplay2.sh /odm/bin/start-airplay2.sh

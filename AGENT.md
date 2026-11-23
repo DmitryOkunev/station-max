@@ -91,9 +91,11 @@ sequenceDiagram
     Agent->>GPU: Execute /data/local/tmp/permissive esc-flip 0x291352c 1 0
     GPU->>Kernel: Flips kernel byte at 0x291352c (selinux_enforcing: 1 -> 0)
     Station-->>Agent: SELinux is now Permissive!
-    Agent->>Station: Remount /odm rw & install rootd, init rc, dropbear scripts
-    Agent->>Station: Mount --bind /data/dropbear/etc /system/etc (passwd + shadow)
-    Agent->>Station: Start Dropbear SSH (:2222)
+    Agent->>GPU: Execute permissive esc-shell < setup_root.sh
+    GPU->>Kernel: Rewrites calling task credentials to UID 0 (root) & caps
+    Kernel-->>Station: Spawns root shell, remounts /odm rw & installs persistence
+    Station->>Station: Mount --bind /data/dropbear/etc /system/etc (passwd + shadow)
+    Station->>Station: Start Dropbear SSH (:2222)
     Agent->>Station: Install Apps & Fix Permissions (Step 04)
     Agent->>FQ: Build & Deploy Quasar Bridge with SmartTube (Step 05)
     Agent->>Station: Execute station-stream bridge
@@ -190,6 +192,7 @@ sequenceDiagram
 
 | Path | Description | Recommended Permissions |
 |---|---|---|
+| `/odm/bin/permissive` | Mali GPU exploit & esc-flip / esc-shell | `755`, `u:object_r:adbd_exec:s0` |
 | `/odm/bin/rootd` | Root daemon (v4) | `755`, `u:object_r:adbd_exec:s0` |
 | `/odm/bin/dropbearmulti` | Dropbear SSH + keygen + scp | `755`, `u:object_r:adbd_exec:s0` |
 | `/odm/bin/mediaseeker.dex` | Native MediaDaemon & MediaSeeker DEX | `644`, `root:root` |

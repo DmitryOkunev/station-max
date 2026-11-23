@@ -11,10 +11,12 @@ case "$BUILD" in
         ;;
 esac
 
-/data/local/tmp/permissive esc-flip "$OFFSET" 1 0 2>/dev/null
+[ -x /odm/bin/permissive ] && PERM=/odm/bin/permissive || PERM=/data/local/tmp/permissive
+
+"$PERM" esc-flip "$OFFSET" 1 0 2>/dev/null
 
 while [ "$(cat /sys/fs/selinux/enforce 2>/dev/null)" = "1" ]; do
-    /data/local/tmp/permissive esc-flip "$OFFSET" 1 0 2>/dev/null
+    "$PERM" esc-flip "$OFFSET" 1 0 2>/dev/null
     sleep 3
 done
 
